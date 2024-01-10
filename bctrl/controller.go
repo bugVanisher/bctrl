@@ -36,6 +36,7 @@ func (bc *BoomerController) clientListener() {
 		case "hatch_complete":
 		case "client_stopped":
 		case "stats":
+			onWorkerReport(msg.Data)
 		case "exception":
 		case "eof":
 			bc.workerMng.delWorker(msg.NodeID)

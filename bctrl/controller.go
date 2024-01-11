@@ -1,6 +1,7 @@
 package bctrl
 
 import (
+	"errors"
 	"log"
 	"time"
 )
@@ -50,4 +51,22 @@ func (bc *BoomerController) addWorker(msg *message) {
 		LastHeartbeat: time.Now(),
 	}
 	bc.workerMng.addWorker(worker)
+}
+
+func (bc *BoomerController) spawn(userCount uint64, rate float64) error {
+	if userCount <= 0 || rate <= 0 {
+		return errors.New("invalid params")
+	}
+	for _, worker := range bc.workerMng.workers {
+		msg := &message{
+			NodeID: worker.NodeId,
+			Type:   "spawn",
+			Data: map[string]interface{}{
+				"num_users":  userCount,
+				"spawn_rate": rate,
+			},
+		}
+		bc.server.send(msg)
+	}
+	return nil
 }

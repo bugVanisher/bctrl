@@ -138,8 +138,8 @@ func (s *statsEntry) reset() {
 }
 
 func (s *statsEntry) deserialize(data map[string]interface{}) {
-	s.name = data["name"].(string)
-	s.method = data["method"].(string)
+	s.name = string(data["name"].([]uint8))
+	s.method = string(data["method"].([]uint8))
 	s.lastRequestTimestamp = data["last_request_timestamp"].(int64)
 	s.startTime = data["start_time"].(int64)
 	s.numRequests = data["num_requests"].(int64)
@@ -148,9 +148,19 @@ func (s *statsEntry) deserialize(data map[string]interface{}) {
 	s.maxResponseTime = data["max_response_time"].(int64)
 	s.minResponseTime = data["min_response_time"].(int64)
 	s.totalContentLength = data["total_content_length"].(int64)
-	s.responseTimes = data["response_times"].(map[int64]int64)
-	s.numReqsPerSec = data["num_reqs_per_sec"].(map[int64]int64)
-	s.numFailPerSec = data["num_fail_per_sec"].(map[int64]int64)
+
+	convert2Int64 := func(d map[interface{}]interface{}) map[int64]int64 {
+		re := make(map[int64]int64)
+		for k, v := range d {
+			re[k.(int64)] = v.(int64)
+		}
+
+		return re
+	}
+
+	s.responseTimes = convert2Int64(data["response_times"].(map[interface{}]interface{}))
+	s.numReqsPerSec = convert2Int64(data["num_reqs_per_sec"].(map[interface{}]interface{}))
+	s.numFailPerSec = convert2Int64(data["num_fail_per_sec"].(map[interface{}]interface{}))
 }
 
 func (s *statsEntry) serialize() map[string]interface{} {
@@ -228,25 +238,35 @@ func (err *statsError) toMap() map[string]interface{} {
 }
 
 func (err *statsError) deserialize(e map[string]interface{}) {
-	err.name = e["name"].(string)
-	err.method = e["method"].(string)
-	err.error = e["error"].(string)
+	err.name = string(e["name"].([]uint8))
+	err.method = string(e["method"].([]uint8))
+	err.error = string(e["error"].([]uint8))
 	err.occurrences = e["occurrences"].(int64)
 }
 
 func onWorkerReport(data map[string]interface{}) {
 	for _, statsData := range data["stats"].([]interface{}) {
 		entry := &statsEntry{}
-		entry.deserialize(statsData.(map[string]interface{}))
+		newStatsData := make(map[string]interface{})
+		for key, val := range statsData.(map[interface{}]interface{}) {
+			newStatsData[key.(string)] = val
+		}
+		entry.deserialize(newStatsData)
 		requestKey := entry.name + entry.method
-		if _, ok := gatherStats.entries[requestKey]; ok {
+		if _, ok := gatherStats.entries[requestKey]; !ok {
 			gatherStats.entries[requestKey] = gatherStats.get(entry.name, entry.method)
 		}
 		gatherStats.entries[requestKey].extend(entry)
 	}
 
-	for key, err := range data["errors"].(map[string]map[string]interface{}) {
+	for k, vmap := range data["errors"].(map[interface{}]interface{}) {
+		remap := vmap.(map[interface{}]interface{})
+		key := k.(string)
 		e := &statsError{}
+		err := make(map[string]interface{})
+		for kk, vv := range remap {
+			err[kk.(string)] = vv
+		}
 		e.deserialize(err)
 		if _, ok := gatherStats.errors[key]; !ok {
 			gatherStats.errors[key] = e
@@ -255,7 +275,11 @@ func onWorkerReport(data map[string]interface{}) {
 		}
 	}
 	total := &statsEntry{}
-	total.deserialize(data["stats_total"].(map[string]interface{}))
+	t := make(map[string]interface{})
+	for k, v := range data["stats_total"].(map[interface{}]interface{}) {
+		t[k.(string)] = v
+	}
+	total.deserialize(t)
 	gatherStats.total.extend(total)
 
 }

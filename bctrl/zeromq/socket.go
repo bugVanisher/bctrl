@@ -1,4 +1,4 @@
-package bctrl
+package zeromq
 
 import (
 	"fmt"
@@ -29,7 +29,7 @@ func NewRouterSocket(id string) *RouterSocket {
 	}
 }
 
-//Bind ...
+// Bind ...
 func (s *RouterSocket) Bind(endpoint string) {
 	parts := strings.Split(endpoint, "://")
 

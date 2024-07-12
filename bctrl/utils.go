@@ -43,3 +43,25 @@ func Max(x, y int64) int64 {
 	}
 	return y
 }
+
+func SplitInteger(m, n int) (ints []int) {
+	quotient := m / n
+	remainder := m % n
+	if remainder >= 0 {
+		for i := 0; i < n-remainder; i++ {
+			ints = append(ints, quotient)
+		}
+		for i := 0; i < remainder; i++ {
+			ints = append(ints, quotient+1)
+		}
+		return
+	} else if remainder < 0 {
+		for i := 0; i < -remainder; i++ {
+			ints = append(ints, quotient-1)
+		}
+		for i := 0; i < n+remainder; i++ {
+			ints = append(ints, quotient)
+		}
+	}
+	return
+}
